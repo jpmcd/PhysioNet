@@ -14,7 +14,7 @@ if __name__ == '__main__':
   valid_pct = 1./4
   maxlen = 10000
   batch_size = 20
-  num_epochs = 100
+  num_epochs = 10
   conv1_channels = 32
   conv2_channels = 32
   out3_channels = 60
@@ -35,7 +35,6 @@ if __name__ == '__main__':
   #Build TensorFlow graph
   x = tf.placeholder(tf.float32, shape=[None, maxlen, 1], name='signal')
   y = tf.placeholder(tf.int32, shape=[None], name='labels')
-
   
   #Inputs are given to 1D convolution
   with tf.variable_scope('conv1') as scope:
@@ -95,16 +94,35 @@ if __name__ == '__main__':
   train_op = optimizer.apply_gradients(zip(grads, tvars))
 
   #Accuracy (max of logits vs. labels) used for both training and validation sets
-
+  top_k = tf.nn.in_top_k(softmax_logits, y, k=1, name='top_k')
+  #accuracy = tf.reduce_mean(top_k)
+  accuracy = tf.reduce_mean(tf.cast(top_k, tf.float32))
 
   #Execute graph, train on training data and test validation data
-  batch_inds = input_data.get_minibatch_inds(n_train, batch_size)
+  for epoch in range(num_epochs):
+    print "Epoch %d" % epoch
 
-  for inds in batch_inds:
-    sess.run([loss, train, correct], feed_dict={x: train_x[inds], y: train_y[inds]})
+    batch_inds = input_data.get_minibatch_inds(n_train, batch_size)
+    valid_inds = input_data.get_minibatch_inds(n_valid, batch_size)
+
+    n_batches = len(batch_inds-1)
+    losses = np.zeros(n_batches)
+    for i, inds in enumerate(batch_inds[:-1]):
+      losses[i], _, = sess.run([total_loss, train_op],
+        feed_dict={x: train_x[inds], y: train_y[inds]})
+      print "\rbatch %d / %d"%(i, n_batches)
+      sys.stdout.flush()
+    print ""
+
+    avg_loss = np.mean(losses)
+
+    accuracies = np.zeros(len(valid_inds)-1)
+    for i, inds in enumerate(valid_inds[:-1]):
+      accuracies[i] = sess.run([accuracy],
+        feed_dict={x: valid_x[inds], y: valid_y[inds]})
+
+    valid_acc = np.mean(accuracies)
+    print "average loss: %f, validation accuracy: %f\n"%(epoch, valid_acc)
 
 
-
-
-  
 
