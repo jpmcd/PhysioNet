@@ -38,7 +38,7 @@ if __name__ == '__main__':
 
   #Build TensorFlow graph
   x = tf.placeholder(tf.float32, shape=[None, maxlen, 1], name='signal')
-  y = tf.placeholder(tf.int32, shape=[batch_size], name='labels')
+  y = tf.placeholder(tf.int32, shape=[None], name='labels')
   
   #Inputs are given to 1D convolution
   with tf.variable_scope('conv1') as scope:
