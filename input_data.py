@@ -12,10 +12,11 @@ from random import shuffle
 
 def open_data(mat_path, save_path):
   '''
-    For each file convert the signal to an STFT and append to
+    For each file open the signal as a numpy array and append to
     list, append label to separate list, and pickle.
 
     mat_path = path to .mat files
+    save_path = pickled lists of numpy arrays
   '''
 
   with open('files.txt') as F:
@@ -44,22 +45,22 @@ def open_data(mat_path, save_path):
         errorstr = 'Unexpected label: '+key+','+lab
         raise ValueError(errorstr)
 
-  with open(save_path,'wb') as datafile:
+  with open(save_path, 'wb') as datafile:
     pickle.dump(signals, datafile)
     pickle.dump(labels,datafile)
 
   return
 
 def split_datasets(data_path, valid_pct):
-  #Load the STFTs and labels from pickle file, make a training and validation set
+  #Load the signals and labels from pickle file, make a training and validation set
 
-  with open(data_path,'rb') as datafile:
+  with open(data_path, 'rb') as datafile:
     dataset = pickle.load(datafile)
     labels = pickle.load(datafile)
 
   label_ct = [0, 0, 0, 0]
   category_str = ['Normal', 'Arrhythmia', 'Other', 'Noisy']
-  category_inds = [[]]*4
+  category_inds = [[], [], [], []]
   for i,l in enumerate(labels):
     label_ct[l] += 1
     category_inds[l].append(i)
@@ -70,7 +71,8 @@ def split_datasets(data_path, valid_pct):
   for i in range(4):
     print 'Percent %s = %d / %d, %f' % (category_str[i], label_ct[i], total, label_ct[i]/total)
 
-    catlen = len(category_inds[i])
+    #catlen = len(category_inds[i])
+    catlen = label_ct[i]
     ntrain = int(np.round(catlen*(1-valid_pct)))
     shuffle(category_inds[i])
     train_inds.extend(category_inds[i][0:ntrain])

@@ -5,6 +5,7 @@ import tensorflow as tf
 
 import os.path
 import input_data
+import sys
 
 
 if __name__ == '__main__':
@@ -14,17 +15,20 @@ if __name__ == '__main__':
   valid_pct = 1./4
   maxlen = 10000
   batch_size = 20
-  num_epochs = 10
+  num_epochs = 100
   conv1_channels = 32
   conv2_channels = 32
   out3_channels = 60
   
   #Check if pickle file exists, else make file from .mat files
+  print "Checking for data file"
   if not os.path.isfile(pickle_path):
     input_data.open_data(path, pickle_path)
 
+  print "Splitting training and validation sets"
   train, valid = input_data.split_datasets(pickle_path, valid_pct)
 
+  print "Cutting to length"
   train_x, train_y = input_data.prepare_dataset(train[0], train[1], maxlen)
   valid_x, valid_y = input_data.prepare_dataset(valid[0], valid[1], maxlen)
   n_train = len(train_y)
@@ -68,23 +72,24 @@ if __name__ == '__main__':
       initializer=tf.truncated_normal_initializer(stddev=.001))
     bias = tf.get_variable(name='bias', shape=[out3_channels],
       initializer=tf.constant_initializer(0.1))
-    full3 = tf.relu(tf.matmul(flat_layer, weights)+bias, name='layer')
+    full3 = tf.nn.relu(tf.matmul(flat_layer, weights)+bias, name='layer')
 
   #Softmax layer
   with tf.variable_scope('softmax') as scope:
     weights = tf.get_variable(name='weights', shape=[out3_channels, 4],
       initializer=tf.truncated_normal_initializer(stddev=1./out3_channels))
-    bias = tf.get_variable(name='bias', shape=4,
+    bias = tf.get_variable(name='bias', shape=[4],
       initializer=tf.constant_initializer(0.0))
     softmax_logits = tf.add(tf.matmul(full3, weights), bias, name='softmax')
 
   #Cross entropy and loss with regularization term
   cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(
-    logits=softmax_logits, labels=labels)
+    logits=softmax_logits, labels=y)
   avg_cross_entropy = tf.reduce_mean(cross_entropy)
 
   weight_decay = tf.constant(0.01)
-  total_loss = tf.add(avg_cross_entropy, tf.scalar_mul(weight_decay, weights),
+  l2_loss = tf.nn.l2_loss(weights)
+  total_loss = tf.add(avg_cross_entropy, tf.scalar_mul(weight_decay, l2_loss),
     name='total_loss')
 
   #Training operation on loss
@@ -98,19 +103,28 @@ if __name__ == '__main__':
   #accuracy = tf.reduce_mean(top_k)
   accuracy = tf.reduce_mean(tf.cast(top_k, tf.float32))
 
+  print 'accuracy', accuracy.shape.as_list()
+
+  #Make session, initialize variables
+  init = tf.global_variables_initializer()
+
+  sess = tf.Session()  
+  sess.run(init)
+
   #Execute graph, train on training data and test validation data
+  print "Beginning training:"
   for epoch in range(num_epochs):
     print "Epoch %d" % epoch
 
     batch_inds = input_data.get_minibatch_inds(n_train, batch_size)
     valid_inds = input_data.get_minibatch_inds(n_valid, batch_size)
 
-    n_batches = len(batch_inds-1)
+    n_batches = len(batch_inds)-1
     losses = np.zeros(n_batches)
     for i, inds in enumerate(batch_inds[:-1]):
-      losses[i], _, = sess.run([total_loss, train_op],
+      losses[i], _ = sess.run([total_loss, train_op],
         feed_dict={x: train_x[inds], y: train_y[inds]})
-      print "\rbatch %d / %d"%(i, n_batches)
+      print "batch %d / %d\r"%(i, n_batches) , 
       sys.stdout.flush()
     print ""
 
@@ -118,11 +132,12 @@ if __name__ == '__main__':
 
     accuracies = np.zeros(len(valid_inds)-1)
     for i, inds in enumerate(valid_inds[:-1]):
-      accuracies[i] = sess.run([accuracy],
+      acc = sess.run([accuracy],
         feed_dict={x: valid_x[inds], y: valid_y[inds]})
+      accuracies[i] = acc[0]
 
     valid_acc = np.mean(accuracies)
-    print "average loss: %f, validation accuracy: %f\n"%(epoch, valid_acc)
+    print "average loss: %f, validation accuracy: %f\n"%(avg_loss, valid_acc)
 
 
 
