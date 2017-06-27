@@ -34,7 +34,22 @@ if __name__ == '__main__':
   n_train = len(train_y)
   n_valid = len(valid_y)
 
-  #Perform signal normalization? Are signals normalized?
+  #Perform signal normalization: max over multiple windows, take average
+  win_length = 450 #number of samples in window
+  stride = 150 #spaced apart
+  for i in range(n_train):
+    x = train_x[i]
+    sig_length = len(x)
+    maxes = []
+    n_slices = np.floor((sig_length - (win_length - win_stride)) / stride)
+
+    for j in range(n_slices):
+      start = j*stride
+      window = x[start:start+win_length]
+      maxes.append(np.max(window))
+
+    avg_max = np.mean(maxes)
+    train_x[i] = x/avg_max
 
   #Build TensorFlow graph
   x = tf.placeholder(tf.float32, shape=[None, maxlen, 1], name='signal')
