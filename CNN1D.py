@@ -16,8 +16,8 @@ if __name__ == '__main__':
   maxlen = 10000
   batch_size = 20
   num_epochs = 100
-  conv1_channels = 32
-  conv2_channels = 32
+  conv1_channels = 64
+  conv2_channels = 64
   out3_channels = 60
   
   #Check if pickle file exists, else make file from .mat files
@@ -42,7 +42,7 @@ if __name__ == '__main__':
   
   #Inputs are given to 1D convolution
   with tf.variable_scope('conv1') as scope:
-    kernel = tf.get_variable(name='weights', shape=[30,1,conv1_channels],
+    kernel = tf.get_variable(name='weights', shape=[60,1,conv1_channels],
       initializer=tf.truncated_normal_initializer(stddev=.001))
     bias = tf.get_variable(name='bias', shape=[conv1_channels],
       initializer=tf.constant_initializer(0.))
@@ -53,7 +53,7 @@ if __name__ == '__main__':
 
   with tf.variable_scope('conv2') as scope:
     kernel = tf.get_variable(name='weights',
-      shape=[10,conv1_channels,conv2_channels], 
+      shape=[5,conv1_channels,conv2_channels], 
       initializer=tf.truncated_normal_initializer(stddev=.001))
     bias = tf.get_variable(name='bias', shape=[conv2_channels],
       initializer=tf.constant_initializer(0.))
@@ -81,6 +81,8 @@ if __name__ == '__main__':
     bias = tf.get_variable(name='bias', shape=[4],
       initializer=tf.constant_initializer(0.0))
     softmax_logits = tf.add(tf.matmul(full3, weights), bias, name='softmax')
+
+  argmax = tf.argmax(softmax_logits, axis=1)
 
   #Cross entropy and loss with regularization term
   cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(
@@ -130,14 +132,25 @@ if __name__ == '__main__':
 
     avg_loss = np.mean(losses)
 
-    accuracies = np.zeros(len(valid_inds)-1)
-    for i, inds in enumerate(valid_inds[:-1]):
-      acc = sess.run([accuracy],
-        feed_dict={x: valid_x[inds], y: valid_y[inds]})
-      accuracies[i] = acc[0]
+    acc, pred = sess.run([accuracy, argmax],
+      feed_dict={x: valid_x, y: valid_y})
 
-    valid_acc = np.mean(accuracies)
-    print "average loss: %f, validation accuracy: %f\n"%(avg_loss, valid_acc)
+    cat_total = np.array([np.sum(valid_y==i) for i in range(4)])
+    cat_corr = np.array([np.sum((valid_y==i)*(valid_y==pred)) for i in range(4)])
+    Fscore = np.mean(cat_corr/cat_total)
+
+    print ["%d / %d"%(cat_corr[i], cat_total[i]) for i in range(4)]
+    print cat_corr/cat_total
+    print "average loss: %f, validation accuracy: %f, F score: %f\n"%(avg_loss, acc, Fscore)
+
+    #accuracies = np.zeros(len(valid_inds)-1)
+    #for i, inds in enumerate(valid_inds[:-1]):
+    #  acc, pred = sess.run([accuracy, argmax],
+    #    feed_dict={x: valid_x[inds], y: valid_y[inds]})
+    #  accuracies[i] = acc[0]
+
+    #valid_acc = np.mean(accuracies)
+    #print "average loss: %f, validation accuracy: %f\n"%(avg_loss, valid_acc)
 
 
 
