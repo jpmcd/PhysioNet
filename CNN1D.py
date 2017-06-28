@@ -35,18 +35,18 @@ if __name__ == '__main__':
   n_valid = len(valid_y)
 
   #Perform signal normalization: max over multiple windows, take average
-  win_length = 450 #number of samples in window
-  stride = 150 #spaced apart
+  win_length = 300 #number of samples in window
+  stride = 300 #spaced apart
   for i in range(n_train):
     x = train_x[i]
     sig_length = len(x)
-    maxes = []
-    n_slices = np.floor((sig_length - (win_length - win_stride)) / stride)
+    n_slices = np.floor((sig_length - (win_length - stride)) / stride)
+    maxes = np.zeros(1,30)
 
     for j in range(n_slices):
       start = j*stride
       window = x[start:start+win_length]
-      maxes.append(np.max(window))
+      maxes[j] = np.max(window)
 
     avg_max = np.mean(maxes)
     train_x[i] = x/avg_max
