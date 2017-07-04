@@ -16,8 +16,8 @@ if __name__ == '__main__':
   maxlen = 10000
   batch_size = 20
   num_epochs = 100
-  conv1_channels = 64
-  conv2_channels = 64
+  conv1_channels = 32
+  conv2_channels = 32
   out3_channels = 60
   
   #Check if pickle file exists, else make file from .mat files
@@ -37,19 +37,20 @@ if __name__ == '__main__':
   #Perform signal normalization: max over multiple windows, take average
   win_length = 300 #number of samples in window
   stride = 300 #spaced apart
-  for i in range(n_train):
-    x = train_x[i]
-    sig_length = len(x)
-    n_slices = np.floor((sig_length - (win_length - stride)) / stride)
-    maxes = np.zeros(1,30)
+  if True:
+    for i in range(n_train):
+      x = train_x[i]
+      sig_length = len(x)
+      n_slices = int(np.floor((sig_length - (win_length - stride)) / stride))
+      maxes = np.zeros(n_slices)
 
-    for j in range(n_slices):
-      start = j*stride
-      window = x[start:start+win_length]
-      maxes[j] = np.max(window)
+      for j in range(n_slices):
+        start = j*stride
+        window = x[start:start+win_length]
+        maxes[j] = np.max(window)
 
-    avg_max = np.mean(maxes)
-    train_x[i] = x/avg_max
+      avg_max = np.mean(maxes)
+      train_x[i] = x/avg_max
 
   #Build TensorFlow graph
   x = tf.placeholder(tf.float32, shape=[None, maxlen, 1], name='signal')
