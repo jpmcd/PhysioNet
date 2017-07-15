@@ -1,17 +1,20 @@
 from __future__ import division
 
+import input_data
+import local_config
+import layer_utils
+
 import numpy as np
 import tensorflow as tf
 
 import os.path
-import input_data
 import sys
 
 
 if __name__ == '__main__':
 
-  path = '/home/mcdonald/Desktop/training2017/'
-  pickle_path = '/scratch/PhysioNet/data.pkl'
+  path = local_config.STEVEN_PATH
+  pickle_path = local_config.STEVEN_PICKLE_PATH
   valid_pct = 1./4
   maxlen = 10000
   batch_size = 20
@@ -19,6 +22,7 @@ if __name__ == '__main__':
   conv1_channels = 32
   conv2_channels = 32
   out3_channels = 60
+  l2_regularization = 0.002
   
   #Check if pickle file exists, else make file from .mat files
   print "Checking for data file"
@@ -55,28 +59,23 @@ if __name__ == '__main__':
   #Build TensorFlow graph
   x = tf.placeholder(tf.float32, shape=[None, maxlen, 1], name='signal')
   y = tf.placeholder(tf.int32, shape=[None], name='labels')
+
+  # Set up regularization.
+  weight_decay = tf.constant(l2_regularization)
+  l2_loss = 0
   
   #Inputs are given to 1D convolution
   with tf.variable_scope('conv1') as scope:
-    kernel = tf.get_variable(name='weights', shape=[60,1,conv1_channels],
-      initializer=tf.truncated_normal_initializer(stddev=.001))
-    bias = tf.get_variable(name='bias', shape=[conv1_channels],
-      initializer=tf.constant_initializer(0.))
-    conv = tf.nn.conv1d(x, kernel, stride=10, padding='SAME')
-    relu = tf.nn.relu(tf.nn.bias_add(conv, bias))
-    layer = tf.nn.pool(relu, window_shape=[5], pooling_type='MAX',
-      padding='SAME', strides=[3], name='layer')
+    [layer, loss] = layer_utils.add_convolutional_layers(
+      input_tensor=x, conv_shape=[60, 1, conv1_channels], conv_stride=10, 
+      window_shape=5, pool_strides=3, l2_regularization=weight_decay)
+    l2_loss += loss
 
   with tf.variable_scope('conv2') as scope:
-    kernel = tf.get_variable(name='weights',
-      shape=[5,conv1_channels,conv2_channels], 
-      initializer=tf.truncated_normal_initializer(stddev=.001))
-    bias = tf.get_variable(name='bias', shape=[conv2_channels],
-      initializer=tf.constant_initializer(0.))
-    conv = tf.nn.conv1d(layer, kernel, stride=5, padding='SAME')
-    relu = tf.nn.relu(tf.nn.bias_add(conv, bias))
-    layer = tf.nn.pool(relu, window_shape=[3], pooling_type='MAX',
-      padding='SAME', strides=[2], name='layer')
+    [layer, loss] = layer_utils.add_convolutional_layers(
+      input_tensor=layer, conv_shape=[5, conv1_channels, conv2_channels], conv_stride=5, 
+      window_shape=3, pool_strides=2, l2_regularization=weight_decay)
+    l2_loss += loss
 
   #Reshape layer to [batch, ndims]
   ndim = np.prod(layer.shape.as_list()[1:], dtype=np.int32)
@@ -89,6 +88,7 @@ if __name__ == '__main__':
     bias = tf.get_variable(name='bias', shape=[out3_channels],
       initializer=tf.constant_initializer(0.1))
     full3 = tf.nn.relu(tf.matmul(flat_layer, weights)+bias, name='layer')
+    l2_loss += tf.scalar_mul(weight_decay, tf.nn.l2_loss(weights))
 
   #Softmax layer
   with tf.variable_scope('softmax') as scope:
@@ -97,6 +97,7 @@ if __name__ == '__main__':
     bias = tf.get_variable(name='bias', shape=[4],
       initializer=tf.constant_initializer(0.0))
     softmax_logits = tf.add(tf.matmul(full3, weights), bias, name='softmax')
+    l2_loss += tf.scalar_mul(weight_decay, tf.nn.l2_loss(weights))
 
   argmax = tf.argmax(softmax_logits, axis=1)
 
@@ -105,10 +106,7 @@ if __name__ == '__main__':
     logits=softmax_logits, labels=y)
   avg_cross_entropy = tf.reduce_mean(cross_entropy)
 
-  weight_decay = tf.constant(0.01)
-  l2_loss = tf.nn.l2_loss(weights)
-  total_loss = tf.add(avg_cross_entropy, tf.scalar_mul(weight_decay, l2_loss),
-    name='total_loss')
+  total_loss = tf.add(avg_cross_entropy, l2_loss, name='total_loss')
 
   #Training operation on loss
   tvars = tf.trainable_variables()
