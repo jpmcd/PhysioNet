@@ -13,8 +13,8 @@ import sys
 
 if __name__ == '__main__':
 
-  path = local_config.JOEY_PATH
-  pickle_path = local_config.JOEY_PICKLE_PATH
+  path = local_config.STEVEN_PATH
+  pickle_path = local_config.STEVEN_PICKLE_PATH
   valid_pct = 1./4
   maxlen = 10000
   batch_size = 20
@@ -99,7 +99,7 @@ if __name__ == '__main__':
       initializer=tf.truncated_normal_initializer(stddev=1./out3_channels))
     bias = tf.get_variable(name='bias', shape=[4],
       initializer=tf.constant_initializer(0.0))
-    softmax_logits = tf.add(tf.matmul(full3, weights), bias, name='softmax')
+    softmax_logits = tf.add(tf.matmul(out3, weights), bias, name='softmax')
     l2_loss += tf.scalar_mul(weight_decay, tf.nn.l2_loss(weights))
 
   argmax = tf.argmax(softmax_logits, axis=1)
