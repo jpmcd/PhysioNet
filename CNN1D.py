@@ -13,8 +13,8 @@ import sys
 
 if __name__ == '__main__':
 
-  path = local_config.STEVEN_PATH
-  pickle_path = local_config.STEVEN_PICKLE_PATH
+  path = local_config.JOEY_PATH
+  pickle_path = local_config.JOEY_PICKLE_PATH
   valid_pct = 1./4
   maxlen = 10000
   batch_size = 20
@@ -23,6 +23,7 @@ if __name__ == '__main__':
   conv2_channels = 32
   out3_channels = 60
   l2_regularization = 0.002
+  keep_probability = 0.9
   
   #Check if pickle file exists, else make file from .mat files
   print "Checking for data file"
@@ -88,6 +89,8 @@ if __name__ == '__main__':
     bias = tf.get_variable(name='bias', shape=[out3_channels],
       initializer=tf.constant_initializer(0.1))
     full3 = tf.nn.relu(tf.matmul(flat_layer, weights)+bias, name='layer')
+    keep_prob = tf.placeholder(tf.float32)
+    out3 = tf.nn.dropout(full3, keep_prob)
     l2_loss += tf.scalar_mul(weight_decay, tf.nn.l2_loss(weights))
 
   #Softmax layer
@@ -138,16 +141,18 @@ if __name__ == '__main__':
     n_batches = len(batch_inds)-1
     losses = np.zeros(n_batches)
     for i, inds in enumerate(batch_inds[:-1]):
-      losses[i], _ = sess.run([total_loss, train_op],
-        feed_dict={x: train_x[inds], y: train_y[inds]})
+      losses[i], _ = sess.run(
+        [total_loss, train_op],
+        feed_dict={x: train_x[inds], y: train_y[inds], keep_prob: keep_probability})
       print "batch %d / %d\r"%(i, n_batches) , 
       sys.stdout.flush()
     print ""
 
     avg_loss = np.mean(losses)
 
-    acc, pred = sess.run([accuracy, argmax],
-      feed_dict={x: valid_x, y: valid_y})
+    acc, pred = sess.run(
+      [accuracy, argmax],
+      feed_dict={x: valid_x, y: valid_y, keep_prob: 1.0})
 
     cat_total = np.array([np.sum(valid_y==i) for i in range(4)])
     cat_corr = np.array([np.sum((valid_y==i)*(valid_y==pred)) for i in range(4)])
