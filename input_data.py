@@ -42,17 +42,19 @@ def open_data(mat_path, save_path):
       elif lab == '~':
         labels.append(3)
       else:
-        errorstr = 'Unexpected label: '+key+','+lab
+        errorstr = 'Unexpected label: %s, %s '%(key, lab)
         raise ValueError(errorstr)
 
   with open(save_path, 'wb') as datafile:
     pickle.dump(signals, datafile)
-    pickle.dump(labels,datafile)
+    pickle.dump(labels, datafile)
 
   return
 
-def split_datasets(data_path, valid_pct):
-  #Load the signals and labels from pickle file, make a training and validation set
+
+def split_datasets(data_path, valid_pct, n_folds):
+  #Load the signals and labels from pickle file, partition training set into n_folds partitions
+  #Ensure that the same ratio of different labels is in each training set
 
   with open(data_path, 'rb') as datafile:
     dataset = pickle.load(datafile)
@@ -60,44 +62,38 @@ def split_datasets(data_path, valid_pct):
 
   label_ct = [0, 0, 0, 0]
   category_str = ['Normal', 'Arrhythmia', 'Other', 'Noisy']
-  category_inds = [[], [], [], []]
-  for i,l in enumerate(labels):
+  category_inds = [[] for cat in category_str]
+  for i, l in enumerate(labels):
     label_ct[l] += 1
     category_inds[l].append(i)
   total = sum(label_ct)
 
-  train_inds = []
-  valid_inds = []
-  for i in range(4):
+  train_inds = [[] for i in range(n_folds)]
+
+  for i in range(len(label_ct)):
     print 'Percent %s = %d / %d, %f' % (category_str[i], label_ct[i], total, label_ct[i]/total)
-
-    #catlen = len(category_inds[i])
+    
     catlen = label_ct[i]
-    ntrain = int(np.round(catlen*(1-valid_pct)))
     shuffle(category_inds[i])
-    train_inds.extend(category_inds[i][0:ntrain])
-    valid_inds.extend(category_inds[i][ntrain:])
+    for j in range(n_folds):
+      start = int(np.round(j/n_folds*catlen))
+      end = int(np.round((j+1)/n_folds*catlen))
+      train_inds[j].extend(category_inds[i][start:end])
 
-  train_inds.sort()
-  valid_inds.sort()
+  for i in range(n_folds):
+    train_inds[i].sort()
 
-  train_x = []
-  train_y = []
-  valid_x = []
-  valid_y = []
+  split_x = [[] for i in range(n_folds)]
+  split_y = [[] for i in range(n_folds)]
 
-  for i in train_inds:
-    train_x.append(dataset[i])
-    train_y.append(labels[i])
+  for fold, fold_inds in enumerate(train_inds):
+    for i in fold_inds:
+      split_x[fold].append(dataset[i])
+      split_y[fold].append(labels[i])
 
-  for i in valid_inds:
-    valid_x.append(dataset[i])
-    valid_y.append(labels[i])
+  split = [split_x, split_y]
 
-  train = (train_x, train_y)
-  valid = (valid_x, valid_y)
-
-  return train, valid
+  return split
 
 
 def prepare_dataset(data_x, data_y, maxlen=None):

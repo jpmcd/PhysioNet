@@ -9,6 +9,7 @@ import tensorflow as tf
 
 import os.path
 import sys
+import itertools
 
 
 if __name__ == '__main__':
@@ -31,7 +32,12 @@ if __name__ == '__main__':
     input_data.open_data(path, pickle_path)
 
   print "Splitting training and validation sets"
-  train, valid = input_data.split_datasets(pickle_path, valid_pct)
+  split = input_data.split_datasets(pickle_path, valid_pct)
+
+  print "Concatenate n-1 folds for training, and save one for validation" 
+  valid = [split[0][0], split[1][0]]
+  train[0] = [itertools.chain([split[0][i] for i in len(split[0])])
+  train[1] = [itertools.chain([split[1][i] for i in len(split[1])])
 
   print "Cutting to length"
   train_x, train_y = input_data.prepare_dataset(train[0], train[1], maxlen)
