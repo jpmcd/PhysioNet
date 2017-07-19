@@ -16,7 +16,7 @@ if __name__ == '__main__':
 
   path = local_config.STEVEN_PATH
   pickle_path = local_config.STEVEN_PICKLE_PATH
-  valid_pct = 1./4
+  n_folds = 4
   maxlen = 10000
   batch_size = 20
   num_epochs = 100
@@ -31,13 +31,14 @@ if __name__ == '__main__':
   if not os.path.isfile(pickle_path):
     input_data.open_data(path, pickle_path)
 
-  print "Splitting training and validation sets"
-  split = input_data.split_datasets(pickle_path, valid_pct)
+  print "Splitting data into %d folds"
+  split = input_data.split_datasets(pickle_path, n_folds)
 
-  print "Concatenate n-1 folds for training, and save one for validation" 
+  print "Concatenate %d folds for training, and save one for validation" 
   valid = [split[0][0], split[1][0]]
-  train[0] = [itertools.chain([split[0][i] for i in len(split[0])])
-  train[1] = [itertools.chain([split[1][i] for i in len(split[1])])
+  train_x = itertools.chain([split[0][i] for i in len(split[0])])
+  train_y = itertools.chain([split[1][i] for i in len(split[0])])
+  train = [train_x, train_y]
 
   print "Cutting to length"
   train_x, train_y = input_data.prepare_dataset(train[0], train[1], maxlen)

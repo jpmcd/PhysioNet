@@ -52,7 +52,7 @@ def open_data(mat_path, save_path):
   return
 
 
-def split_datasets(data_path, valid_pct, n_folds):
+def split_datasets(data_path, n_folds):
   #Load the signals and labels from pickle file, partition training set into n_folds partitions
   #Ensure that the same ratio of different labels is in each training set
 
