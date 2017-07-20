@@ -53,8 +53,10 @@ def open_data(mat_path, save_path):
 
 
 def split_datasets(data_path, n_folds):
-  #Load the signals and labels from pickle file, partition training set into n_folds partitions
-  #Ensure that the same ratio of different labels is in each training set
+  '''
+    Load the signals and labels from pickle file, partition training set into n_folds partitions
+    Ensure that the same ratio of different labels is in each training set
+  '''
 
   with open(data_path, 'rb') as datafile:
     dataset = pickle.load(datafile)
@@ -97,7 +99,9 @@ def split_datasets(data_path, n_folds):
 
 
 def prepare_dataset(data_x, data_y, maxlen=None):
-  #Make numpy-friendly dataset from signals and labels
+  '''
+    Make numpy-friendly dataset from signals and labels
+  '''
 
   nsamples = len(data_y)
   lengths = [len(sig) for sig in data_x]
@@ -105,12 +109,13 @@ def prepare_dataset(data_x, data_y, maxlen=None):
   if not maxlen:
     maxlen = min(lengths)
 
-  x = np.zeros((nsamples, maxlen)).astype('float32')
-  y = np.array(data_y).astype('int32')
+  x = np.zeros((nsamples, maxlen), dtype=float)
+  y = np.array(data_y, dtype=int)
   for i, sig in enumerate(data_x):
     end = min(maxlen, lengths[i])
     x[i,:end] = sig[:end]
 
+##WHY AM I EXPANDING DIMENSION HERE?############################
   x = np.expand_dims(x, axis=2)
 
   return x, y

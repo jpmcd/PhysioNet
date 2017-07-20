@@ -25,6 +25,11 @@ if __name__ == '__main__':
   out3_channels = 60
   l2_regularization = 0.002
   keep_probability = 0.9
+
+  #Normalization parameters
+  normalize_data = True
+  win_length = 300 #number of samples in window
+  stride = 300 #spaced apart
   
   #Check if pickle file exists, else make file from .mat files
   print "Checking for data file"
@@ -47,22 +52,8 @@ if __name__ == '__main__':
   n_valid = len(valid_y)
 
   #Perform signal normalization: max over multiple windows, take average
-  win_length = 300 #number of samples in window
-  stride = 300 #spaced apart
-  if True:
-    for i in range(n_train):
-      x = train_x[i]
-      sig_length = len(x)
-      n_slices = int(np.floor((sig_length - (win_length - stride)) / stride))
-      maxes = np.zeros(n_slices)
-
-      for j in range(n_slices):
-        start = j*stride
-        window = x[start:start+win_length]
-        maxes[j] = np.max(window)
-
-      avg_max = np.mean(maxes)
-      train_x[i] = x/avg_max
+  if normalize_data:
+    train_x = layer_utils.signal_normalization(train_x, win_length, stride)
 
   #Build TensorFlow graph
   x = tf.placeholder(tf.float32, shape=[None, maxlen, 1], name='signal')
@@ -177,6 +168,3 @@ if __name__ == '__main__':
 
     #valid_acc = np.mean(accuracies)
     #print "average loss: %f, validation accuracy: %f\n"%(avg_loss, valid_acc)
-
-
-

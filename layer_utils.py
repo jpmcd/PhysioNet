@@ -1,8 +1,28 @@
 # Convenience functions for putting together TensorFlow layers.
 
+import numpy as np
 import tensorflow as tf
 
 
+def signal_normalization(train_x, win_length, stride):
+  n_train = len(train_x)
+  normalized = np.empty(train_x.shape, dtype=float)
+
+  for i in range(n_train):
+    x = train_x[i]
+    sig_length = len(x)
+    n_slices = int(np.floor((sig_length - (win_length - stride)) / stride))
+    maxes = np.zeros(n_slices)
+
+    for j in range(n_slices):
+      start = j*stride
+      window = x[start:start+win_length]
+      maxes[j] = np.max(window)
+
+    avg_max = np.mean(maxes)
+    normalized_x[i] = x/avg_max
+
+  return normalized
 
 
 def add_convolutional_layers(input_tensor, conv_shape, conv_stride, window_shape, pool_strides,
