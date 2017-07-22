@@ -59,7 +59,7 @@ def split_datasets(data_path, n_folds):
   '''
 
   with open(data_path, 'rb') as datafile:
-    dataset = pickle.load(datafile)
+    signals = pickle.load(datafile)
     labels = pickle.load(datafile)
 
   label_ct = [0, 0, 0, 0]
@@ -90,7 +90,7 @@ def split_datasets(data_path, n_folds):
 
   for fold, fold_inds in enumerate(train_inds):
     for i in fold_inds:
-      split_x[fold].append(dataset[i])
+      split_x[fold].append(signals[i])
       split_y[fold].append(labels[i])
 
   split = [split_x, split_y]
@@ -116,7 +116,7 @@ def prepare_dataset(data_x, data_y, maxlen=None):
     x[i,:end] = sig[:end]
 
 ##WHY AM I EXPANDING DIMENSION HERE?############################
-  x = np.expand_dims(x, axis=2)
+  #x = np.expand_dims(x, axis=2) #removing this to see if it causes issues
 
   return x, y
 
@@ -147,5 +147,37 @@ if __name__ == '__main__':
 
     plt.pcolormesh(t, f[0:100], np.abs(Zxx[0:100,:]), )
     plt.show()
+
+  pickle_path = '/scratch/PhysioNet/data.pkl'
+  path = '/home/mcdonald/Desktop/training2017/'
+
+  #Test to see if variance(x[i]-x[i-1]) is different for noisy signals vs other signals
+  if not os.path.isfile(pickle_path):
+    input_data.open_data(path, pickle_path)
+  
+  with open(pickle_path, 'rb') as datafile:
+    signals = pickle.load(datafile)
+    labels = pickle.load(datafile)
+
+  label_ct = [0, 0, 0, 0]
+  n_categories = len(label_ct)
+
+  category_var = [[] for i in range(n_categories)]
+  for i, sig in enumerate(signals):
+    x_i = np.array(sig[1:])
+    x_im1 = np.array(sig[0:-1])
+    diff = x_i - x_im1
+    var = np.var(diff)
+    category_var[labels[i]].append(var)
+    label_ct[labels[i]] += 1
+
+  mean_var = [np.mean(variances) for variances in category_var]
+
+  print mean_var
+  print label_ct
+  for i in range(4):
+    print np.random.choice(category_var[i], 10, replace=False)
+
+
 
 
