@@ -9,7 +9,6 @@ import os.path
 import pickle
 from random import shuffle
 
-
 def open_data(mat_path, save_path):
   '''
     For each file open the signal as a numpy array and append to
@@ -115,8 +114,7 @@ def prepare_dataset(data_x, data_y, maxlen=None):
     end = min(maxlen, lengths[i])
     x[i,:end] = sig[:end]
 
-##WHY AM I EXPANDING DIMENSION HERE?############################
-  #x = np.expand_dims(x, axis=2) #removing this to see if it causes issues
+  x = np.expand_dims(x, axis=2)
 
   return x, y
 

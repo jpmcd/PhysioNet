@@ -14,8 +14,8 @@ import itertools
 
 if __name__ == '__main__':
 
-  path = local_config.STEVEN_PATH
-  pickle_path = local_config.STEVEN_PICKLE_PATH
+  path = local_config.STEVEN_LAPTOP_PATH
+  pickle_path = local_config.STEVEN_LAPTOP_PICKLE_PATH
 
   #Data params
   n_folds = 4
@@ -40,12 +40,15 @@ if __name__ == '__main__':
   if not os.path.isfile(pickle_path):
     input_data.open_data(path, pickle_path)
 
-  print "Splitting data into %d folds"
+  print "Splitting data into %d folds" % n_folds
   split = input_data.split_datasets(pickle_path, n_folds)
 
-  print "Concatenate %d folds for training, and save one for validation" 
-  train_x = itertools.chain([split[0][i] for i in range(n_folds-1)])
-  train_y = itertools.chain([split[1][i] for i in range(n_folds-1)])
+  print ("Concatenate %d folds for training, and save one for validation"
+         % n_folds)
+  train_x = list(itertools.chain.from_iterable(
+    [split[0][i] for i in range(n_folds-1)]))
+  train_y = list(itertools.chain.from_iterable(
+    [split[1][i] for i in range(n_folds-1)]))
   train = [train_x, train_y]
 
   valid_x = split[0][n_folds-1]
@@ -66,21 +69,24 @@ if __name__ == '__main__':
   x = tf.placeholder(tf.float32, shape=[None, maxlen, 1], name='signal')
   y = tf.placeholder(tf.int32, shape=[None], name='labels')
 
-  # Set up regularization.
+  # Set up regularization and dropout.
   weight_decay = tf.constant(l2_regularization)
   l2_loss = 0
+  keep_prob = tf.placeholder(tf.float32)
   
   #Inputs are given to 1D convolution
   with tf.variable_scope('conv1') as scope:
     [layer, loss] = layer_utils.add_convolutional_layers(
       input_tensor=x, conv_shape=[60, 1, conv1_channels], conv_stride=10, 
-      window_shape=5, pool_strides=3, l2_regularization=weight_decay)
+      window_shape=5, pool_strides=3, l2_regularization=weight_decay,
+      keep_prob=keep_prob)
     l2_loss += loss
 
   with tf.variable_scope('conv2') as scope:
     [layer, loss] = layer_utils.add_convolutional_layers(
-      input_tensor=layer, conv_shape=[5, conv1_channels, conv2_channels], conv_stride=5, 
-      window_shape=3, pool_strides=2, l2_regularization=weight_decay)
+      input_tensor=layer, conv_shape=[5, conv1_channels, conv2_channels],
+      conv_stride=5, window_shape=3, pool_strides=2,
+      l2_regularization=weight_decay, keep_prob=keep_prob)
     l2_loss += loss
 
   #Reshape layer to [batch, ndims]
@@ -94,7 +100,6 @@ if __name__ == '__main__':
     bias = tf.get_variable(name='bias', shape=[out3_channels],
       initializer=tf.constant_initializer(0.1))
     full3 = tf.nn.relu(tf.matmul(flat_layer, weights)+bias, name='layer')
-    keep_prob = tf.placeholder(tf.float32)
     out3 = tf.nn.dropout(full3, keep_prob)
     l2_loss += tf.scalar_mul(weight_decay, tf.nn.l2_loss(weights))
 
