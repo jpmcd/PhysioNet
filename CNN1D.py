@@ -14,8 +14,8 @@ import itertools
 
 if __name__ == '__main__':
 
-  path = local_config.STEVEN_PATH
-  pickle_path = local_config.STEVEN_PICKLE_PATH
+  path = local_config.PATH
+  pickle_path = local_config.PICKLE_PATH
 
   #Data params
   n_folds = 4
@@ -36,11 +36,12 @@ if __name__ == '__main__':
   keep_probability = 0.9
 
   #Check if pickle file exists, else make file from .mat files
-  print "Checking for data file"
+  print "Checking for data file..."
   if not os.path.isfile(pickle_path):
+    print "Making pickle from .mat files..."
     input_data.open_data(path, pickle_path)
 
-  print "Splitting data into %d folds"
+  print "Splitting data into %d folds" % n_folds
   split = input_data.split_datasets(pickle_path, n_folds)
 
   print "Concatenate %d folds for training, and save one for validation" 

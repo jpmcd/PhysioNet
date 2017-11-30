@@ -103,6 +103,7 @@ def prepare_dataset(data_x, data_y, maxlen=None):
     Make numpy-friendly dataset from signals and labels
   '''
 
+  data_y = list(data_y)
   nsamples = len(data_y)
   lengths = [len(sig) for sig in data_x]
 

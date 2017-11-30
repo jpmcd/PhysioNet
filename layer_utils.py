@@ -6,7 +6,7 @@ import tensorflow as tf
 
 def signal_normalization(train_x, win_length, stride):
   n_train = len(train_x)
-  normalized = np.empty(train_x.shape, dtype=float)
+  normalized_x = np.empty(train_x.shape, dtype=float)
 
   for i in range(n_train):
     x = train_x[i]
@@ -22,7 +22,7 @@ def signal_normalization(train_x, win_length, stride):
     avg_max = np.mean(maxes)
     normalized_x[i] = x/avg_max
 
-  return normalized
+  return normalized_x
 
 
 def add_convolutional_layers(input_tensor, conv_shape, conv_stride, window_shape, pool_strides,
