@@ -20,21 +20,22 @@ def signal_normalization(train_x, win_length, stride):
       maxes[j] = np.max(window)
 
     avg_max = np.mean(maxes)
-    normalized_x[i] = x/avg_max
+    normalized[i] = x/avg_max
 
   return normalized_x
 
 
-def add_convolutional_layers(input_tensor, conv_shape, conv_stride, window_shape, pool_strides,
-                            l2_regularization):
+def add_convolutional_layers(input_tensor, conv_shape, conv_stride, window_shape, pool_strides, l2_regularization, keep_prob):
     # Adds a convolutional layer to the network. Returns the L2 norm of the convolutional kernel.
     kernel = tf.get_variable(name='weights', shape=conv_shape,
       initializer=tf.truncated_normal_initializer(stddev=.001))
     bias = tf.get_variable(name='bias', shape=[conv_shape[-1]],
       initializer=tf.constant_initializer(0.))
     conv = tf.nn.conv1d(input_tensor, kernel, stride=conv_stride, padding='SAME')
+    
     relu = tf.nn.relu(tf.nn.bias_add(conv, bias))
-    layer = tf.nn.pool(relu, window_shape=[window_shape], pooling_type='MAX',
+    dropped = tf.nn.dropout(relu, keep_prob)
+    layer = tf.nn.pool(dropped, window_shape=[window_shape], pooling_type='MAX',
       padding='SAME', strides=[pool_strides], name='layer')
     l2_loss = tf.scalar_mul(l2_regularization, tf.nn.l2_loss(kernel))
     return [layer, l2_loss]
