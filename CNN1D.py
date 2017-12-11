@@ -25,14 +25,16 @@ if __name__ == '__main__':
   maxlen = 10000
 
   #Normalization params
-  normalize_data = True
+  normalize_data = False
   win_length = 300 #number of samples in window
   stride = 300 #spaced apart
-  
+  smoothing_window = 10
+
   #Net/training params
   batch_size = 20
   num_epochs = 100
-  conv1_channels = 32
+  input_channels = 2
+  conv1_channels = 64
   conv2_channels = 32
   out3_channels = 60
   l2_regularization = 0.002
@@ -60,8 +62,8 @@ if __name__ == '__main__':
   valid = [valid_x, valid_y]
 
   print "Cutting to length"
-  train_x, train_y = input_data.prepare_dataset(train[0], train[1], maxlen)
-  valid_x, valid_y = input_data.prepare_dataset(valid[0], valid[1], maxlen)
+  train_x, train_y = input_data.prepare_dataset(train[0], train[1], input_channels=input_channels, smoothing_window=smoothing_window, maxlen=maxlen)
+  valid_x, valid_y = input_data.prepare_dataset(valid[0], valid[1], input_channels=input_channels, smoothing_window=smoothing_window, maxlen=maxlen)
   n_train = len(train_y)
   n_valid = len(valid_y)
 
@@ -70,7 +72,7 @@ if __name__ == '__main__':
     train_x = layer_utils.signal_normalization(train_x, win_length, stride)
 
   #Build TensorFlow graph
-  x = tf.placeholder(tf.float32, shape=[None, maxlen, 1], name='signal')
+  x = tf.placeholder(tf.float32, shape=[None, maxlen, input_channels], name='signal')
   y = tf.placeholder(tf.int32, shape=[None], name='labels')
 
   # Set up regularization and dropout.
@@ -81,14 +83,14 @@ if __name__ == '__main__':
   #Inputs are given to 1D convolution
   with tf.variable_scope('conv1') as scope:
     [layer, loss] = layer_utils.add_convolutional_layers(
-      input_tensor=x, conv_shape=[60, 1, conv1_channels], conv_stride=10, 
+      input_tensor=x, conv_shape=[20, input_channels, conv1_channels], conv_stride=10, 
       window_shape=5, pool_strides=3, l2_regularization=weight_decay,
       keep_prob=keep_prob)
     l2_loss += loss
 
   with tf.variable_scope('conv2') as scope:
     [layer, loss] = layer_utils.add_convolutional_layers(
-      input_tensor=layer, conv_shape=[5, conv1_channels, conv2_channels],
+      input_tensor=layer, conv_shape=[10, conv1_channels, conv2_channels],
       conv_stride=5, window_shape=3, pool_strides=2,
       l2_regularization=weight_decay, keep_prob=keep_prob)
     l2_loss += loss
@@ -141,7 +143,7 @@ if __name__ == '__main__':
   #Make session, initialize variables
   init = tf.global_variables_initializer()
 
-  sess = tf.Session()  
+  sess = tf.Session() 
   sess.run(init)
 
   #Execute graph, train on training data and test validation data

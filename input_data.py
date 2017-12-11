@@ -1,8 +1,9 @@
 from __future__ import division
 
+import sys
 import numpy as np
 import scipy.io as sio
-import scipy.signal as signal
+from scipy import signal
 import matplotlib.pyplot as plt
 
 import os.path
@@ -97,7 +98,7 @@ def split_datasets(data_path, n_folds):
   return split
 
 
-def prepare_dataset(data_x, data_y, maxlen=None):
+def prepare_dataset(data_x, data_y, input_channels=1, smoothing_window=0, maxlen=None):
   '''
     Make numpy-friendly dataset from signals and labels
   '''
@@ -109,13 +110,22 @@ def prepare_dataset(data_x, data_y, maxlen=None):
   if not maxlen:
     maxlen = min(lengths)
 
-  x = np.zeros((nsamples, maxlen), dtype=float)
+  x = np.zeros((nsamples, maxlen, input_channels), dtype=float)
   y = np.array(data_y, dtype=int)
   for i, sig in enumerate(data_x):
     end = min(maxlen, lengths[i])
-    x[i,:end] = sig[:end]
-
-  x = np.expand_dims(x, axis=2)
+    if smoothing_window:
+      end = end-smoothing_window+1
+      #x[i,:end,0] = average_smoothing(sig[:end], smoothing_window)
+      sigs = [sig[k:end+k] for k in range(smoothing_window)]
+      x[i,:end,0] = np.sum(sigs, axis=0)
+    else:
+      x[i,:end,0] = sig[:end]
+    print "shaping: %d / %d\r"%(i, nsamples) , 
+    sys.stdout.flush()
+  if input_channels > 1:
+    for i in range(len(x)):
+      x[i,:-1,1] = x[i,1:,0] - x[i,:-1,0]
 
   return x, y
 
@@ -128,6 +138,10 @@ def get_minibatch_inds(n_samples, batch_size):
   batch_inds = [shuffled[i*batch_size:(i+1)*batch_size] for i in range(n_batches)]
 
   return batch_inds
+
+
+def average_smoothing(sig, window):
+  return signal.convolve(sig, np.ones(window)*(1./window), mode='same')
 
 
 if __name__ == '__main__':

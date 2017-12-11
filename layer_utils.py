@@ -20,7 +20,7 @@ def signal_normalization(train_x, win_length, stride):
       maxes[j] = np.max(window)
 
     avg_max = np.mean(maxes)
-    normalized[i] = x/avg_max
+    normalized_x[i] = x/avg_max
 
   return normalized_x
 
